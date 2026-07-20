@@ -98,10 +98,24 @@ document.querySelectorAll('[data-screen]').forEach((button) => {
   });
 });
 
-fetch('https://api.github.com/repos/Blaizzy/nativ/releases/latest')
+fetch('https://api.github.com/repos/Blaizzy/nativ/releases/latest', {
+  cache: 'no-store',
+  headers: { Accept: 'application/vnd.github+json' }
+})
   .then((response) => (response.ok ? response.json() : Promise.reject()))
   .then((release) => {
-    const installer = release.assets?.find((asset) => asset.name.endsWith('.dmg'));
+    if (release.tag_name) {
+      document.querySelectorAll('[data-release-version]').forEach((node) => {
+        node.textContent = release.tag_name;
+      });
+    }
+
+    const installers = release.assets?.filter(
+      (asset) => asset.state === 'uploaded' && asset.name.toLowerCase().endsWith('.dmg')
+    );
+    const installer = installers?.find(
+      (asset) => asset.content_type === 'application/x-apple-diskimage'
+    ) ?? installers?.[0];
     if (!installer?.browser_download_url) return;
 
     document.querySelectorAll('[data-download]').forEach((link) => {
