@@ -98,7 +98,19 @@ document.querySelectorAll('[data-screen]').forEach((button) => {
   });
 });
 
-fetch('https://api.github.com/repos/Marvis-Labs/mlx-platform')
+fetch('https://api.github.com/repos/Blaizzy/nativ/releases/latest')
+  .then((response) => (response.ok ? response.json() : Promise.reject()))
+  .then((release) => {
+    const installer = release.assets?.find((asset) => asset.name.endsWith('.dmg'));
+    if (!installer?.browser_download_url) return;
+
+    document.querySelectorAll('[data-download]').forEach((link) => {
+      link.href = installer.browser_download_url;
+    });
+  })
+  .catch(() => {});
+
+fetch('https://api.github.com/repos/Blaizzy/nativ')
   .then((response) => (response.ok ? response.json() : Promise.reject()))
   .then((repository) => {
     const value = repository.stargazers_count;
