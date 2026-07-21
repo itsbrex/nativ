@@ -1,0 +1,60 @@
+name: Dev Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Cache bundled mlx-vlm server distribution
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist/mlx-vlm-server
+            .cache/python-build-standalone
+          key: mlx-vlm-server-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('PythonDistribution/**') }}
+
+      - name: Cache Swift package dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/XcodeDerivedData/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+
+      - name: Build app (unsigned Debug)
+        run: make xcode-build
+
+      - name: Zip app bundle
+        run: |
+          set -euo pipefail
+          cd build/XcodeDerivedData/Build/Products/Debug
+          ditto -c -k --keepParent Nativ.app Nativ-dev.zip
+
+      - name: Compute artifact name
+        run: |
+          set -euo pipefail
+          safe_ref="$(echo "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" | tr '/' '-')"
+          echo "ARTIFACT_NAME=Nativ-dev-${safe_ref}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: build/XcodeDerivedData/Build/Products/Debug/Nativ-dev.zip
+          retention-days: 7
