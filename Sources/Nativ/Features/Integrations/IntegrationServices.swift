@@ -73,6 +73,12 @@ struct IntegrationProfileManager {
         case .goose:
             guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
             return root["name"] as? String == Self.providerID
+        case .crush:
+            guard
+                let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let providers = root["providers"] as? [String: Any]
+            else { return false }
+            return providers[Self.providerID] != nil
         case .codex, .hermes, .aider:
             guard let text = String(data: data, encoding: .utf8) else { return false }
             return text.contains(Self.providerID) && text.contains(openAIBaseURL)
@@ -112,6 +118,8 @@ struct IntegrationProfileManager {
             try configureAider()
         case .goose:
             try configureGoose(models: models)
+        case .crush:
+            try configureCrush(selectedModelID: selectedModelID, models: models, maxOutputTokens: maxOutputTokens)
         }
     }
 
@@ -181,6 +189,8 @@ struct IntegrationProfileManager {
             return integrationsSupportURL.appendingPathComponent("aider.env")
         case .goose:
             return home.appendingPathComponent(".config/goose/custom_providers/nativ.json")
+        case .crush:
+            return integrationsSupportURL.appendingPathComponent("crush.json")
         }
     }
 
@@ -424,6 +434,39 @@ struct IntegrationProfileManager {
         try writeJSON(provider, to: configurationURL(for: .goose))
     }
 
+    private func configureCrush(
+        selectedModelID: String,
+        models: [IntegrationModelDescriptor],
+        maxOutputTokens: Int
+    ) throws {
+        let providerModels = models.map { model -> [String: Any] in
+            var entry: [String: Any] = ["id": model.id, "name": model.displayName]
+            if let contextWindow = model.contextWindow {
+                entry["context_window"] = contextWindow
+            }
+            return entry
+        }
+        let large: [String: Any] = [
+            "model": selectedModelID,
+            "provider": Self.providerID,
+            "max_tokens": maxOutputTokens
+        ]
+        let small: [String: Any] = ["model": selectedModelID, "provider": Self.providerID]
+        let configuration: [String: Any] = [
+            "$schema": "https://charm.land/crush.json",
+            "models": ["large": large, "small": small],
+            "providers": [
+                Self.providerID: [
+                    "type": "openai-compat",
+                    "base_url": openAIBaseURL,
+                    "api_key": "nativ",
+                    "models": providerModels
+                ]
+            ]
+        ]
+        try writeJSON(configuration, to: configurationURL(for: .crush))
+    }
+
     private func launchConfiguration(
         tool: IntegrationTool,
         selectedModelID: String
@@ -459,6 +502,8 @@ struct IntegrationProfileManager {
                 ["session", "start", "--provider", Self.providerID],
                 ["NATIV_API_KEY": "nativ", "GOOSE_MODEL": selectedModelID]
             )
+        case .crush:
+            return ([], ["CRUSH_GLOBAL_CONFIG": configurationURL(for: tool).path])
         }
     }
 
