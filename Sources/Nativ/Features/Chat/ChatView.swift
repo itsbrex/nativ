@@ -24,6 +24,7 @@ struct ChatView: View {
     @State private var transcriptScrollPosition = ScrollPosition(edge: .bottom)
     @State private var composerHeight: CGFloat = 0
     @State private var followsLatestMessage = true
+    @State private var isUserScrollingTranscript = false
 
     var body: some View {
         ModelConfigurationLayout(
@@ -69,18 +70,21 @@ struct ChatView: View {
     }
 
     private var canSend: Bool {
-        model.settings.structuredOutputValidationError == nil
+        !model.isModelLoading
+            && model.settings.structuredOutputValidationError == nil
             && chat.canSend(isRunning: model.isRunning, selectedModelID: selectedModelID)
     }
 
     private var canCompose: Bool {
         model.isRunning
+            && !model.isModelLoading
             && selectedModelID?.isEmpty == false
             && model.settings.structuredOutputValidationError == nil
     }
 
     private var unavailableReason: String? {
-        chat.unavailableReason(isRunning: model.isRunning, selectedModelID: selectedModelID)
+        model.modelLoadingStatusText
+            ?? chat.unavailableReason(isRunning: model.isRunning, selectedModelID: selectedModelID)
             ?? model.settings.structuredOutputValidationError
     }
 
@@ -91,7 +95,8 @@ struct ChatView: View {
                     if chat.messages.isEmpty {
                         ChatEmptyTranscriptView(
                             isRunning: model.isRunning,
-                            selectedModelID: selectedModelID
+                            selectedModelID: selectedModelID,
+                            modelLoadingProgress: model.isModelLoading ? model.modelLoadingProgress : nil
                         )
                         .frame(maxWidth: .infinity)
                         .padding(.top, 120)
@@ -110,10 +115,24 @@ struct ChatView: View {
             .padding(.bottom, max(18, composerHeight))
         }
         .scrollPosition($transcriptScrollPosition)
-        .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.visibleRect.maxY >= geometry.contentSize.height - 160
-        } action: { _, isNearBottom in
-            followsLatestMessage = isNearBottom
+        .onScrollPhaseChange { _, newPhase, context in
+            switch newPhase {
+            case .tracking, .interacting:
+                isUserScrollingTranscript = true
+                followsLatestMessage = false
+            case .decelerating:
+                if isUserScrollingTranscript {
+                    followsLatestMessage = false
+                }
+            case .idle:
+                guard isUserScrollingTranscript else {
+                    return
+                }
+                isUserScrollingTranscript = false
+                followsLatestMessage = isAtTranscriptBottom(context.geometry)
+            case .animating:
+                break
+            }
         }
         .onChange(of: chat.scrollToken) { _, _ in
             if followsLatestMessage {
@@ -128,6 +147,10 @@ struct ChatView: View {
             followsLatestMessage = true
             transcriptScrollPosition.scrollTo(edge: .bottom)
         }
+    }
+
+    private func isAtTranscriptBottom(_ geometry: ScrollGeometry) -> Bool {
+        geometry.visibleRect.maxY >= geometry.contentSize.height - 8
     }
 }
 
@@ -1591,9 +1614,15 @@ private struct ChatMessageText: View {
 private struct ChatEmptyTranscriptView: View {
     let isRunning: Bool
     let selectedModelID: String?
+    let modelLoadingProgress: Double?
 
     var body: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 9) {
+            if let modelLoadingProgress {
+                ProgressView(value: modelLoadingProgress)
+                    .progressViewStyle(.linear)
+                    .frame(width: 180)
+            }
             Text(title)
                 .font(.headline)
             Text(detail)
@@ -1603,6 +1632,9 @@ private struct ChatEmptyTranscriptView: View {
     }
 
     private var title: String {
+        if modelLoadingProgress != nil {
+            return "Loading model"
+        }
         if !isRunning {
             return "Server is stopped"
         }
@@ -1613,6 +1645,10 @@ private struct ChatEmptyTranscriptView: View {
     }
 
     private var detail: String {
+        if let modelLoadingProgress {
+            let percentage = Int((modelLoadingProgress * 100).rounded())
+            return "\(selectedModelID ?? "Model") · \(percentage)%"
+        }
         if !isRunning {
             return "Start the server to chat."
         }

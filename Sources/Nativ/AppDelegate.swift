@@ -335,6 +335,7 @@ private final class ModelMenuSectionHeaderView: NSView {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let model = NativModel()
+    let softwareUpdater = SoftwareUpdater()
     private let controlPanelNavigation = ControlPanelNavigation()
     private let runtime = SystemRuntimeMonitor()
     private var mainWindowOpener: (() -> Void)?
@@ -349,7 +350,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private weak var highlightedMenuItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        applyApplicationIcon()
         runtime.start()
         model.onMenuStateChanged = { [weak self] in
             guard let self else {
@@ -373,14 +373,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if WelcomePreferences.hasCompleted {
             model.startServer()
         }
-    }
-
-    private func applyApplicationIcon() {
-        guard let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
-              let icon = NSImage(contentsOf: iconURL) else {
-            return
-        }
-        NSApplication.shared.applicationIconImage = icon
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -445,7 +437,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openModelsFromMenu(_ sender: Any?) {
-        openSettings()
+        controlPanelNavigation.open(.models)
+        showMainWindow()
     }
 
     @objc private func openWelcomeFromMenu(_ sender: Any?) {
@@ -465,6 +458,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             model: model,
             navigation: controlPanelNavigation,
             runtime: runtime,
+            softwareUpdater: softwareUpdater,
             onComplete: { [weak self] modelID, serverAPIKey in
                 self?.completeWelcome(modelID: modelID, serverAPIKey: serverAPIKey)
             }
@@ -476,7 +470,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func openSettings() {
-        controlPanelNavigation.open(.models)
+        controlPanelNavigation.open(.settings)
         showMainWindow()
     }
 
@@ -560,7 +554,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        let sessionStatsAreLoading = model.metricsLoading || model.modelSwitchInProgress
+        let sessionStatsAreLoading = model.isModelLoading
         if model.sessionStatsDisplayMetrics != nil || model.isRunning || sessionStatsAreLoading {
             for item in makeSessionStatsMenuItems() {
                 menu.addItem(item)
@@ -658,9 +652,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func refreshVisibleMenuState() {
-        modelMenuItem?.title = model.modelSwitchInProgress
-            ? "Model: Loading…"
-            : "Model: \(selectedModelMenuTitle)"
+        modelMenuItem?.title = modelMenuTitle
         modelMenuItem?.submenu = makeModelSubmenu()
         serverActionMenuItem?.title = model.isRunning ? "Stop Server" : "Start Server"
         serverActionMenuItem?.image = menuIcon(
@@ -671,7 +663,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func makeModelMenuItem() -> NSMenuItem {
         let item = NSMenuItem(
-            title: model.modelSwitchInProgress ? "Model: Loading…" : "Model: \(selectedModelMenuTitle)",
+            title: modelMenuTitle,
             action: nil,
             keyEquivalent: ""
         )
@@ -684,8 +676,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let submenu = NSMenu()
         submenu.autoenablesItems = false
 
-        if model.modelSwitchInProgress {
-            submenu.addItem(disabledMenuItem("Restarting server and loading model…"))
+        if model.isModelLoading {
+            submenu.addItem(disabledMenuItem(model.modelLoadingStatusText ?? "Loading model…"))
             return submenu
         }
 
@@ -780,6 +772,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         let shortName = modelID.split(separator: "/").last.map(String.init) ?? modelID
         return NativFormatting.truncateModelName(shortName, maxLength: 28)
+    }
+
+    private var modelMenuTitle: String {
+        if model.isModelLoading {
+            if let percentage = model.modelLoadingPercentageText {
+                return "Model: Loading \(percentage)"
+            }
+            return "Model: Loading…"
+        }
+        return "Model: \(selectedModelMenuTitle)"
     }
 
     private func modelDisplayName(_ modelID: String) -> String {
@@ -908,9 +910,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let modelMenuItem else {
             return
         }
-        modelMenuItem.title = model.modelSwitchInProgress
-            ? "Model: Loading…"
-            : "Model: \(selectedModelMenuTitle)"
+        modelMenuItem.title = modelMenuTitle
         modelMenuItem.submenu = makeModelSubmenu()
     }
 
@@ -1124,7 +1124,7 @@ private struct SessionStatsContainerView: View {
     let section: SessionStatsSection
 
     private var isLoading: Bool {
-        model.metricsLoading || model.modelSwitchInProgress
+        model.isModelLoading
     }
 
     var body: some View {
@@ -1135,6 +1135,7 @@ private struct SessionStatsContainerView: View {
                     runtime: runtime,
                     tokenActivity: model.sessionStatsDisplayTokenActivity,
                     isLoading: isLoading,
+                    loadingStatusText: model.modelLoadingStatusText,
                     isHighlighted: highlightState.isHighlighted,
                     section: section,
                     displayModel: isLoading
@@ -1149,7 +1150,7 @@ private struct SessionStatsContainerView: View {
                     section: section,
                     statusText: model.settings.normalized().languageModelID == nil
                         ? "Starting server…"
-                        : "Loading model…"
+                        : model.modelLoadingStatusText ?? "Loading model…"
                 )
             }
         }
@@ -1171,6 +1172,7 @@ private struct SessionStatsMenuView: View {
     @ObservedObject var runtime: SystemRuntimeMonitor
     let tokenActivity: [SessionTokenActivitySample]
     let isLoading: Bool
+    let loadingStatusText: String?
     let isHighlighted: Bool
     let section: SessionStatsSection
     let displayModel: String
@@ -1274,7 +1276,7 @@ private struct SessionStatsMenuView: View {
                             .controlSize(.small)
                             .tint(primaryTextColor)
                     }
-                    Text(isLoading ? "Loading model…" : "Running")
+                    Text(isLoading ? loadingStatusText ?? "Loading model…" : "Running")
                         .font(.headline)
                 }
                 Text(NativFormatting.truncateModelName(
