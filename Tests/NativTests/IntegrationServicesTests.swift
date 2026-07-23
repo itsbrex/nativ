@@ -7,7 +7,8 @@ final class IntegrationServicesTests: XCTestCase {
         .claudeCode,
         .hermes,
         .openCode,
-        .aider
+        .aider,
+        .goose
     ]
 
     private var temporaryRoot: URL!
@@ -207,6 +208,31 @@ final class IntegrationServicesTests: XCTestCase {
         XCTAssertEqual(
             launchCommand(for: .aider),
             "cd '/tmp/Nativ Project'\n'/tools/aider' '--env-file' '\(configurationURL.path)' '--model' 'openai/org/local-model'"
+        )
+    }
+
+    func testGooseConfigurationAndLaunchCommand() throws {
+        try configure(.goose)
+
+        let configurationURL = manager.configurationURL(for: .goose)
+        let root = try json(at: configurationURL)
+        XCTAssertEqual(root["name"] as? String, "nativ")
+        XCTAssertEqual(root["engine"] as? String, "openai")
+        XCTAssertEqual(root["api_key_env"] as? String, "NATIV_API_KEY")
+        XCTAssertEqual(root["base_url"] as? String, "http://127.0.0.1:49152/v1/chat/completions")
+        let models = try XCTUnwrap(root["models"] as? [[String: Any]])
+        XCTAssertEqual(models.count, 2)
+        XCTAssertEqual(models[0]["name"] as? String, selectedModel.id)
+        XCTAssertEqual(models[0]["context_limit"] as? Int, selectedModel.contextWindow)
+        XCTAssertEqual(models[1]["context_limit"] as? Int, 131_072)
+        XCTAssertEqual(
+            launchCommand(for: .goose),
+            """
+            cd '/tmp/Nativ Project'
+            export GOOSE_MODEL='org/local-model'
+            export NATIV_API_KEY='nativ'
+            '/tools/goose' 'session' 'start' '--provider' 'nativ'
+            """
         )
     }
 
