@@ -886,7 +886,7 @@ private struct ChatComposerModelIcon: View {
     }
 }
 
-private struct ChatComposerActionMenu: NSViewRepresentable {
+struct ChatComposerActionMenu: NSViewRepresentable {
     let isEnabled: Bool
     let canPasteImage: Bool
     let onAttachImages: () -> Void
@@ -1126,7 +1126,7 @@ private struct ChatQueuedPromptRow: View {
     }
 }
 
-private struct ChatComposerTextEditor: NSViewRepresentable {
+struct ChatComposerTextEditor: NSViewRepresentable {
     @Binding var text: String
     let isEnabled: Bool
     let onSubmit: () -> Void
@@ -1324,7 +1324,7 @@ private enum ComposerReturnBehavior {
     }
 }
 
-private struct ChatPendingImageAttachmentView: View {
+struct ChatPendingImageAttachmentView: View {
     let attachment: ChatImageAttachment
     let onRemove: () -> Void
 

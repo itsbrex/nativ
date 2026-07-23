@@ -165,6 +165,7 @@ struct ControlPanelView: View {
                             .foregroundStyle(isNewChatHovering ? Color.primary : Color.secondary.opacity(0.7))
                     }
                     .buttonStyle(.plain)
+                    .disabled(selectedTab == .imageGeneration && imageGeneration.isGenerating)
                     .help(newRecentHelp)
                     .padding(.trailing, 4)
                     .onHover { isNewChatHovering = $0 }
@@ -230,8 +231,10 @@ struct ControlPanelView: View {
     }
 
     private var recentSessions: [ControlPanelRecentSession] {
-        chat.sessions
-            .map(ControlPanelRecentSession.init(chat:))
+        (
+            chat.sessions.map(ControlPanelRecentSession.init(chat:))
+                + imageGeneration.sessions.map(ControlPanelRecentSession.init(imageGeneration:))
+        )
             .sorted(by: ControlPanelRecentSession.recencySort)
     }
 
@@ -294,15 +297,22 @@ struct ControlPanelView: View {
     }
 
     private func createRecentSession() {
-        chat.createSession()
-        applySidebarSelection(chat.currentSessionID.map(ControlPanelSidebarSelection.chat) ?? .tab(.chat))
+        if selectedTab == .imageGeneration {
+            imageGeneration.createSession()
+            applySidebarSelection(
+                imageGeneration.currentSessionID.map(ControlPanelSidebarSelection.imageGeneration)
+                    ?? .tab(.imageGeneration)
+            )
+        } else {
+            createChatSession()
+        }
     }
 
     private func handleNewChatRequest() {
         guard navigation.consumeNewChatRequest() else {
             return
         }
-        createRecentSession()
+        createChatSession()
     }
 
     private func canExportRecent(_ recent: ControlPanelRecentSession) -> Bool {
@@ -393,7 +403,12 @@ struct ControlPanelView: View {
     }
 
     private var newRecentHelp: String {
-        "Create a new chat"
+        selectedTab == .imageGeneration ? "Create a new image conversation" : "Create a new chat"
+    }
+
+    private func createChatSession() {
+        chat.createSession()
+        applySidebarSelection(chat.currentSessionID.map(ControlPanelSidebarSelection.chat) ?? .tab(.chat))
     }
 
 }

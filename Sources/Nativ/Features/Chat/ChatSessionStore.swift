@@ -261,7 +261,7 @@ struct ChatResponseMetrics: Equatable, Codable {
     }
 }
 
-struct ChatImageAttachment: Identifiable, Equatable, Codable {
+struct ChatImageAttachment: Identifiable, Equatable, Codable, Sendable {
     let id: UUID
     var filename: String
     var mimeType: String
