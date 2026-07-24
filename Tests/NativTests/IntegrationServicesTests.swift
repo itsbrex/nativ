@@ -8,7 +8,8 @@ final class IntegrationServicesTests: XCTestCase {
         .hermes,
         .openCode,
         .aider,
-        .goose
+        .goose,
+        .crush
     ]
 
     private var temporaryRoot: URL!
@@ -232,6 +233,36 @@ final class IntegrationServicesTests: XCTestCase {
             export GOOSE_MODEL='org/local-model'
             export NATIV_API_KEY='nativ'
             '/tools/goose' 'session' 'start' '--provider' 'nativ'
+            """
+        )
+    }
+
+    func testCrushConfigurationAndLaunchCommand() throws {
+        try configure(.crush)
+
+        let configurationURL = manager.configurationURL(for: .crush)
+        let root = try json(at: configurationURL)
+        let providers = try XCTUnwrap(root["providers"] as? [String: Any])
+        let provider = try XCTUnwrap(providers["nativ"] as? [String: Any])
+        XCTAssertEqual(provider["type"] as? String, "openai-compat")
+        XCTAssertEqual(provider["base_url"] as? String, "http://127.0.0.1:49152/v1")
+        XCTAssertEqual(provider["api_key"] as? String, "nativ")
+        let models = try XCTUnwrap(provider["models"] as? [[String: Any]])
+        XCTAssertEqual(models.count, 2)
+        XCTAssertEqual(models[0]["id"] as? String, selectedModel.id)
+        XCTAssertEqual(models[0]["context_window"] as? Int, selectedModel.contextWindow)
+        XCTAssertNil(models[1]["context_window"])
+        let selection = try XCTUnwrap(root["models"] as? [String: Any])
+        let large = try XCTUnwrap(selection["large"] as? [String: Any])
+        XCTAssertEqual(large["model"] as? String, selectedModel.id)
+        XCTAssertEqual(large["provider"] as? String, "nativ")
+        XCTAssertEqual(large["max_tokens"] as? Int, 65_536)
+        XCTAssertEqual(
+            launchCommand(for: .crush),
+            """
+            cd '/tmp/Nativ Project'
+            export CRUSH_GLOBAL_CONFIG='\(configurationURL.path)'
+            '/tools/crush'
             """
         )
     }
