@@ -70,6 +70,9 @@ struct IntegrationProfileManager {
                 let providers = root["provider"] as? [String: Any]
             else { return false }
             return providers[Self.providerID] != nil
+        case .goose:
+            guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+            return root["name"] as? String == Self.providerID
         case .codex, .hermes, .aider:
             guard let text = String(data: data, encoding: .utf8) else { return false }
             return text.contains(Self.providerID) && text.contains(openAIBaseURL)
@@ -107,6 +110,8 @@ struct IntegrationProfileManager {
             )
         case .aider:
             try configureAider()
+        case .goose:
+            try configureGoose(models: models)
         }
     }
 
@@ -174,6 +179,8 @@ struct IntegrationProfileManager {
             return integrationsSupportURL.appendingPathComponent("opencode.json")
         case .aider:
             return integrationsSupportURL.appendingPathComponent("aider.env")
+        case .goose:
+            return home.appendingPathComponent(".config/goose/custom_providers/nativ.json")
         }
     }
 
@@ -399,6 +406,24 @@ struct IntegrationProfileManager {
         try writeText(contents, to: configurationURL(for: .aider))
     }
 
+    private func configureGoose(models: [IntegrationModelDescriptor]) throws {
+        let modelEntries = models.map { model -> [String: Any] in
+            ["name": model.id, "context_limit": model.contextWindow ?? 131_072]
+        }
+        let provider: [String: Any] = [
+            "name": Self.providerID,
+            "engine": "openai",
+            "display_name": "Nativ",
+            "description": "Local models from Nativ",
+            "api_key_env": "NATIV_API_KEY",
+            "base_url": openAIBaseURL + "/chat/completions",
+            "models": modelEntries,
+            "supports_streaming": true,
+            "requires_auth": true
+        ]
+        try writeJSON(provider, to: configurationURL(for: .goose))
+    }
+
     private func launchConfiguration(
         tool: IntegrationTool,
         selectedModelID: String
@@ -428,6 +453,11 @@ struct IntegrationProfileManager {
             return (
                 ["--env-file", configurationURL(for: tool).path, "--model", "openai/\(selectedModelID)"],
                 [:]
+            )
+        case .goose:
+            return (
+                ["session", "start", "--provider", Self.providerID],
+                ["NATIV_API_KEY": "nativ", "GOOSE_MODEL": selectedModelID]
             )
         }
     }

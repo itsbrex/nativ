@@ -7,6 +7,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
     case hermes
     case openCode
     case aider
+    case goose
 
     var id: String { rawValue }
 
@@ -18,6 +19,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .hermes: "Hermes"
         case .openCode: "OpenCode"
         case .aider: "Aider"
+        case .goose: "Goose"
         }
     }
 
@@ -29,6 +31,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .hermes: "hermes"
         case .openCode: "opencode"
         case .aider: "aider"
+        case .goose: "goose"
         }
     }
 
@@ -42,6 +45,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .hermes: "Open agent with tools, skills, and memory"
         case .openCode: "Open-source coding agent"
         case .aider: "AI pair programming in your terminal"
+        case .goose: "Extensible on-machine AI agent"
         }
     }
 
@@ -53,6 +57,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .hermes: URL(string: "https://github.com/NousResearch/hermes-agent")!
         case .openCode: URL(string: "https://opencode.ai/docs")!
         case .aider: URL(string: "https://aider.chat/docs/install.html")!
+        case .goose: URL(string: "https://github.com/block/goose")!
         }
     }
 }
