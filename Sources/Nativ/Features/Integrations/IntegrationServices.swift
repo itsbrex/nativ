@@ -79,7 +79,7 @@ struct IntegrationProfileManager {
                 let providers = root["providers"] as? [String: Any]
             else { return false }
             return providers[Self.providerID] != nil
-        case .codex, .hermes, .aider:
+        case .codex, .hermes, .aider, .qwenCode:
             guard let text = String(data: data, encoding: .utf8) else { return false }
             return text.contains(Self.providerID) && text.contains(openAIBaseURL)
         }
@@ -120,6 +120,8 @@ struct IntegrationProfileManager {
             try configureGoose(models: models)
         case .crush:
             try configureCrush(selectedModelID: selectedModelID, models: models, maxOutputTokens: maxOutputTokens)
+        case .qwenCode:
+            try configureQwenCode(selectedModelID: selectedModelID)
         }
     }
 
@@ -191,6 +193,8 @@ struct IntegrationProfileManager {
             return home.appendingPathComponent(".config/goose/custom_providers/nativ.json")
         case .crush:
             return integrationsSupportURL.appendingPathComponent("crush.json")
+        case .qwenCode:
+            return integrationsSupportURL.appendingPathComponent("qwen.env")
         }
     }
 
@@ -467,6 +471,11 @@ struct IntegrationProfileManager {
         try writeJSON(configuration, to: configurationURL(for: .crush))
     }
 
+    private func configureQwenCode(selectedModelID: String) throws {
+        let contents = "OPENAI_API_KEY=nativ\nOPENAI_BASE_URL=\(openAIBaseURL)\nOPENAI_MODEL=\(selectedModelID)\n"
+        try writeText(contents, to: configurationURL(for: .qwenCode))
+    }
+
     private func launchConfiguration(
         tool: IntegrationTool,
         selectedModelID: String
@@ -504,6 +513,15 @@ struct IntegrationProfileManager {
             )
         case .crush:
             return ([], ["CRUSH_GLOBAL_CONFIG": configurationURL(for: tool).path])
+        case .qwenCode:
+            return (
+                [],
+                [
+                    "OPENAI_API_KEY": "nativ",
+                    "OPENAI_BASE_URL": openAIBaseURL,
+                    "OPENAI_MODEL": selectedModelID
+                ]
+            )
         }
     }
 

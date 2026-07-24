@@ -9,7 +9,8 @@ final class IntegrationServicesTests: XCTestCase {
         .openCode,
         .aider,
         .goose,
-        .crush
+        .crush,
+        .qwenCode
     ]
 
     private var temporaryRoot: URL!
@@ -263,6 +264,26 @@ final class IntegrationServicesTests: XCTestCase {
             cd '/tmp/Nativ Project'
             export CRUSH_GLOBAL_CONFIG='\(configurationURL.path)'
             '/tools/crush'
+            """
+        )
+    }
+
+    func testQwenCodeConfigurationAndLaunchCommand() throws {
+        try configure(.qwenCode)
+
+        let configurationURL = manager.configurationURL(for: .qwenCode)
+        let contents = try String(contentsOf: configurationURL, encoding: .utf8)
+        XCTAssertTrue(contents.contains("OPENAI_API_KEY=nativ"))
+        XCTAssertTrue(contents.contains("OPENAI_BASE_URL=http://127.0.0.1:49152/v1"))
+        XCTAssertTrue(contents.contains("OPENAI_MODEL=org/local-model"))
+        XCTAssertEqual(
+            launchCommand(for: .qwenCode),
+            """
+            cd '/tmp/Nativ Project'
+            export OPENAI_API_KEY='nativ'
+            export OPENAI_BASE_URL='http://127.0.0.1:49152/v1'
+            export OPENAI_MODEL='org/local-model'
+            '/tools/qwen'
             """
         )
     }
