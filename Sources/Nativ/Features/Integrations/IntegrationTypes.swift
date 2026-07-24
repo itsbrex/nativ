@@ -15,6 +15,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
     case continueDev
     case vscode
     case cline
+    case cursor
 
     var id: String { rawValue }
 
@@ -34,6 +35,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .continueDev: "Continue"
         case .vscode: "VS Code"
         case .cline: "Cline"
+        case .cursor: "Cursor"
         }
     }
 
@@ -53,6 +55,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .continueDev: "cn"
         case .vscode: "code"
         case .cline: "cline"
+        case .cursor: "cursor"
         }
     }
 
@@ -74,6 +77,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .continueDev: "Open-source AI code assistant"
         case .vscode: "Copilot BYOK via an OpenAI-compatible endpoint"
         case .cline: "OpenAI-compatible provider in the Cline extension"
+        case .cursor: "OpenAI-compatible endpoint in Cursor's AI panel"
         }
     }
 
@@ -93,6 +97,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .continueDev: URL(string: "https://docs.continue.dev/cli/quickstart")!
         case .vscode: URL(string: "https://code.visualstudio.com/docs/copilot/language-models")!
         case .cline: URL(string: "https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev")!
+        case .cursor: URL(string: "https://docs.cursor.com/settings/models")!
         }
     }
 
@@ -107,6 +112,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         switch self {
         case .vscode: true
         case .cline: true
+        case .cursor: true
         default: false
         }
     }
@@ -114,6 +120,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
     var appBundleIdentifier: String? {
         switch self {
         case .vscode: "com.microsoft.VSCode"
+        case .cursor: "com.todesktop.230313mzl4w4u92"
         default: nil
         }
     }
@@ -134,6 +141,13 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
                 "Open Cline's settings and add an API Provider of type \u{201C}OpenAI Compatible\u{201D}.",
                 "Set the Base URL and API key shown above, then select your model."
             ]
+        case .cursor:
+            [
+                "Start Nativ's server and load a model from the Models page.",
+                "In Cursor, open Settings \u{2192} Models.",
+                "Enable \u{201C}Override OpenAI Base URL\u{201D} and set the Base URL and API key shown above.",
+                "Add your model name, then select it in the chat model picker."
+            ]
         default:
             []
         }
@@ -143,6 +157,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         switch self {
         case .vscode: "Copilot BYOK requires the GitHub Copilot extension, signed in."
         case .cline: "Cline runs inside VS Code and compatible editors."
+        case .cursor: "Only Cursor's chat/AI panel honors a custom OpenAI endpoint \u{2014} Tab and inline edits stay on Cursor's own models."
         default: nil
         }
     }
