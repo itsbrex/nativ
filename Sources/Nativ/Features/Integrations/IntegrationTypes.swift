@@ -12,6 +12,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
     case qwenCode
     case openClaw
     case zed
+    case continueDev
 
     var id: String { rawValue }
 
@@ -28,6 +29,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .qwenCode: "Qwen Code"
         case .openClaw: "OpenClaw"
         case .zed: "Zed"
+        case .continueDev: "Continue"
         }
     }
 
@@ -44,6 +46,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .qwenCode: "qwen"
         case .openClaw: "openclaw"
         case .zed: "zed"
+        case .continueDev: "cn"
         }
     }
 
@@ -62,6 +65,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .qwenCode: "Agentic coding CLI tuned for Qwen"
         case .openClaw: "Open personal AI agent and gateway"
         case .zed: "High-performance, multiplayer code editor"
+        case .continueDev: "Open-source AI code assistant"
         }
     }
 
@@ -78,6 +82,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .qwenCode: URL(string: "https://github.com/QwenLM/qwen-code")!
         case .openClaw: URL(string: "https://docs.openclaw.ai/")!
         case .zed: URL(string: "https://zed.dev/download")!
+        case .continueDev: URL(string: "https://docs.continue.dev/cli/quickstart")!
         }
     }
 
