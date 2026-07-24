@@ -101,6 +101,8 @@ struct IntegrationProfileManager {
             return text.contains(Self.providerID) && text.contains(openAIBaseURL)
         case .vscode:
             return false
+        case .cline:
+            return false
         }
     }
 
@@ -148,6 +150,8 @@ struct IntegrationProfileManager {
         case .continueDev:
             try configureContinue(selectedModelID: selectedModelID, models: models)
         case .vscode:
+            break
+        case .cline:
             break
         }
     }
@@ -230,6 +234,8 @@ struct IntegrationProfileManager {
             return integrationsSupportURL.appendingPathComponent("continue-config.yaml")
         case .vscode:
             return integrationsSupportURL.appendingPathComponent("vscode-guided.json")
+        case .cline:
+            return integrationsSupportURL.appendingPathComponent("cline-guided.json")
         }
     }
 
@@ -641,6 +647,8 @@ struct IntegrationProfileManager {
         case .continueDev:
             return (["--config", configurationURL(for: tool).path], [:])
         case .vscode:
+            return ([], [:])
+        case .cline:
             return ([], [:])
         }
     }
