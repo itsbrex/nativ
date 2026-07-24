@@ -93,7 +93,7 @@ struct IntegrationProfileManager {
                 let openAICompatible = languageModels["openai_compatible"] as? [String: Any]
             else { return false }
             return openAICompatible[Self.providerID] != nil
-        case .codex, .hermes, .aider, .qwenCode:
+        case .codex, .hermes, .aider, .qwenCode, .continueDev:
             guard let text = String(data: data, encoding: .utf8) else { return false }
             return text.contains(Self.providerID) && text.contains(openAIBaseURL)
         }
@@ -140,6 +140,8 @@ struct IntegrationProfileManager {
             try configureOpenClaw(models: models)
         case .zed:
             try configureZed(models: models)
+        case .continueDev:
+            try configureContinue(selectedModelID: selectedModelID, models: models)
         }
     }
 
@@ -217,6 +219,8 @@ struct IntegrationProfileManager {
             return home.appendingPathComponent(".openclaw/openclaw.json")
         case .zed:
             return home.appendingPathComponent(".config/zed/settings.json")
+        case .continueDev:
+            return integrationsSupportURL.appendingPathComponent("continue-config.yaml")
         }
     }
 
@@ -558,6 +562,23 @@ struct IntegrationProfileManager {
         ]
     }
 
+    private func configureContinue(selectedModelID: String, models: [IntegrationModelDescriptor]) throws {
+        let ordered = models.filter { $0.id == selectedModelID } + models.filter { $0.id != selectedModelID }
+        var lines = ["name: nativ", "version: 0.0.1", "models:"]
+        for model in ordered {
+            lines.append("  - name: \(yamlString(model.displayName))")
+            lines.append("    provider: openai")
+            lines.append("    apiBase: \(yamlString(openAIBaseURL))")
+            lines.append("    model: \(yamlString(model.id))")
+            lines.append("    apiKey: nativ")
+            lines.append("    roles:")
+            lines.append("      - chat")
+            lines.append("      - edit")
+            lines.append("      - apply")
+        }
+        try writeText(lines.joined(separator: "\n") + "\n", to: configurationURL(for: .continueDev))
+    }
+
     private func launchConfiguration(
         tool: IntegrationTool,
         selectedModelID: String
@@ -608,6 +629,8 @@ struct IntegrationProfileManager {
             return (["agent", "--model", "\(Self.providerID)/\(selectedModelID)"], [:])
         case .zed:
             return (["."], ["NATIV_API_KEY": "nativ"])
+        case .continueDev:
+            return (["--config", configurationURL(for: tool).path], [:])
         }
     }
 

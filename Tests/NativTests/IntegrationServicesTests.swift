@@ -12,7 +12,8 @@ final class IntegrationServicesTests: XCTestCase {
         .crush,
         .qwenCode,
         .openClaw,
-        .zed
+        .zed,
+        .continueDev
     ]
 
     private var temporaryRoot: URL!
@@ -334,6 +335,21 @@ final class IntegrationServicesTests: XCTestCase {
             export NATIV_API_KEY='nativ'
             '/tools/zed' '.'
             """
+        )
+    }
+
+    func testContinueConfigurationAndLaunchCommand() throws {
+        try configure(.continueDev)
+
+        let configurationURL = manager.configurationURL(for: .continueDev)
+        let contents = try String(contentsOf: configurationURL, encoding: .utf8)
+        XCTAssertTrue(contents.contains("provider: openai"))
+        XCTAssertTrue(contents.contains("apiBase: \"http://127.0.0.1:49152/v1\""))
+        XCTAssertTrue(contents.contains("model: \"org/local-model\""))
+        XCTAssertTrue(contents.contains("apiKey: nativ"))
+        XCTAssertEqual(
+            launchCommand(for: .continueDev),
+            "cd '/tmp/Nativ Project'\n'/tools/cn' '--config' '\(configurationURL.path)'"
         )
     }
 
