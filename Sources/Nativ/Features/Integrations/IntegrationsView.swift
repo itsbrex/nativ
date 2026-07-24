@@ -567,6 +567,12 @@ private struct IntegrationDetailView: View {
                 .labelsHidden()
                 .frame(maxWidth: .infinity)
 
+                if let hint = tool.preferredModelHint {
+                    Label(hint, systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 if let selected = viewModel.selectedModel {
                     HStack(spacing: 8) {
                         if selected.id == viewModel.loadedModelID {

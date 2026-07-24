@@ -9,6 +9,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
     case aider
     case goose
     case crush
+    case qwenCode
 
     var id: String { rawValue }
 
@@ -22,6 +23,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .aider: "Aider"
         case .goose: "Goose"
         case .crush: "Crush"
+        case .qwenCode: "Qwen Code"
         }
     }
 
@@ -35,6 +37,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .aider: "aider"
         case .goose: "goose"
         case .crush: "crush"
+        case .qwenCode: "qwen"
         }
     }
 
@@ -50,6 +53,7 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .aider: "AI pair programming in your terminal"
         case .goose: "Extensible on-machine AI agent"
         case .crush: "Glamourous terminal coding agent"
+        case .qwenCode: "Agentic coding CLI tuned for Qwen"
         }
     }
 
@@ -63,6 +67,14 @@ enum IntegrationTool: String, CaseIterable, Hashable, Identifiable, Sendable {
         case .aider: URL(string: "https://aider.chat/docs/install.html")!
         case .goose: URL(string: "https://github.com/block/goose")!
         case .crush: URL(string: "https://github.com/charmbracelet/crush")!
+        case .qwenCode: URL(string: "https://github.com/QwenLM/qwen-code")!
+        }
+    }
+
+    var preferredModelHint: String? {
+        switch self {
+        case .qwenCode: "Tuned for Qwen models — works with any model served here."
+        default: nil
         }
     }
 }
